@@ -28,13 +28,13 @@ const PATTERN_LABELS = {
 };
 
 const LESSONS = [
-  { id: 1, title: 'Musical Alphabet' },
-  { id: 2, title: 'Find Notes on the Piano' },
-  { id: 3, title: 'Sharps' },
-  { id: 4, title: 'Half Steps' },
-  { id: 5, title: 'Whole Steps' },
-  { id: 6, title: 'Interval Patterns' },
-  { id: 7, title: 'Scale Builder' }
+  { id: 1, title: 'Musical Alphabet', roundsRequired: 3, accuracyRequired: 90, streakRequired: 3 },
+  { id: 2, title: 'Find Notes on the Piano', roundsRequired: 3, accuracyRequired: 90, streakRequired: 3 },
+  { id: 3, title: 'Sharps', roundsRequired: 3, accuracyRequired: 90, streakRequired: 3 },
+  { id: 4, title: 'Half Steps', roundsRequired: 4, accuracyRequired: 90, streakRequired: 4 },
+  { id: 5, title: 'Whole Steps', roundsRequired: 4, accuracyRequired: 90, streakRequired: 4 },
+  { id: 6, title: 'Interval Patterns', roundsRequired: 4, accuracyRequired: 90, streakRequired: 4 },
+  { id: 7, title: 'Scale Builder', roundsRequired: 1, accuracyRequired: 80, streakRequired: 1 }
 ];
 
 const rootNoteEl = document.getElementById('rootNote');
@@ -69,7 +69,8 @@ let appState = {
   streak: 0,
   completedLessons: [],
   unlockedLessons: [1],
-  score: 0
+  score: 0,
+  lessonStats: {}
 };
 
 let targetScale = [];
@@ -77,25 +78,60 @@ let builderState = {
   active: false,
   expectedIndex: 0,
   userNotes: [],
-  completed: false
+  completed: false,
+  attempts: 0,
+  mistakes: 0
 };
 
 let currentQuiz = null;
 let currentLessonRound = null;
 
+function createDefaultLessonStats() {
+  const stats = {};
+  LESSONS.forEach(lesson => {
+    stats[lesson.id] = {
+      roundsWon: 0,
+      totalAttempts: 0,
+      totalCorrect: 0,
+      correctStreak: 0,
+      mistakes: 0,
+      microIndex: 0,
+      mastered: false
+    };
+  });
+  return stats;
+}
+
+function ensureLessonStats() {
+  const defaults = createDefaultLessonStats();
+  appState.lessonStats = appState.lessonStats || {};
+  LESSONS.forEach(lesson => {
+    appState.lessonStats[lesson.id] = {
+      ...defaults[lesson.id],
+      ...(appState.lessonStats[lesson.id] || {})
+    };
+  });
+}
+
 function loadProgress() {
   try {
     const raw = localStorage.getItem(storageKey);
-    if (!raw) return;
+    if (!raw) {
+      ensureLessonStats();
+      return;
+    }
     const saved = JSON.parse(raw);
     appState = {
       ...appState,
       ...saved,
       completedLessons: Array.isArray(saved.completedLessons) ? saved.completedLessons : [],
-      unlockedLessons: Array.isArray(saved.unlockedLessons) && saved.unlockedLessons.length ? saved.unlockedLessons : [1]
+      unlockedLessons: Array.isArray(saved.unlockedLessons) && saved.unlockedLessons.length ? saved.unlockedLessons : [1],
+      lessonStats: saved.lessonStats || {}
     };
+    ensureLessonStats();
   } catch (error) {
     console.warn('Unable to load saved progress.', error);
+    ensureLessonStats();
   }
 }
 
@@ -105,6 +141,20 @@ function saveProgress() {
   } catch (error) {
     console.warn('Unable to save progress.', error);
   }
+}
+
+function getLessonConfig(lessonId = appState.playerLevel) {
+  return LESSONS.find(lesson => lesson.id === lessonId) || LESSONS[0];
+}
+
+function getLessonStats(lessonId = appState.playerLevel) {
+  ensureLessonStats();
+  return appState.lessonStats[lessonId];
+}
+
+function getLessonAccuracy(stats) {
+  if (!stats || stats.totalAttempts === 0) return 100;
+  return Math.round((stats.totalCorrect / stats.totalAttempts) * 100);
 }
 
 function getScale(root, type) {
@@ -135,7 +185,7 @@ function getStepLabel(stepIndex) {
 }
 
 function getCurrentLesson() {
-  return LESSONS.find(lesson => lesson.id === appState.playerLevel) || LESSONS[0];
+  return getLessonConfig(appState.playerLevel);
 }
 
 function renderPattern(type) {
@@ -207,7 +257,6 @@ function setFeedback(html, tone = 'neutral', badge = 'Waiting') {
   feedbackBadgeEl.textContent = badge;
   feedbackBadgeEl.className = `feedback-badge ${tone}`;
   applyPanelState(tone);
-}`;
 }
 
 function setQuizMessage(html, className = '') {
@@ -234,7 +283,14 @@ function getProgressNumbers() {
 
 function updateLessonMeta() {
   const { completed, total } = getProgressNumbers();
-  lessonProgressLabelEl.textContent = `Progress: ${completed} / ${total}`;
+  const lesson = getCurrentLesson();
+  const stats = getLessonStats(lesson.id);
+  const accuracy = getLessonAccuracy(stats);
+  const lessonPrefix = appState.mode === 'lesson'
+    ? `Round ${Math.min(stats.roundsWon + 1, lesson.roundsRequired)} / ${lesson.roundsRequired}`
+    : `Progress: ${completed} / ${total}`;
+
+  lessonProgressLabelEl.textContent = `${lessonPrefix} • Acc ${accuracy}% • Streak ${stats.correctStreak}`;
 
   const modeLabel = {
     lesson: 'Lesson Mode',
@@ -243,22 +299,28 @@ function updateLessonMeta() {
   };
 
   lessonModeLabelEl.textContent = `Mode: ${modeLabel[appState.mode] || 'Lesson Mode'}`;
-  lessonProgressFillEl.style.width = `${Math.max(0, Math.min(100, (completed / Math.max(total, 1)) * 100))}%`;
-  lessonTitleEl.textContent = getCurrentLesson().title;
+  const fill = appState.mode === 'lesson'
+    ? ((stats.roundsWon + (currentLessonRound?.completedCount ? 1 : 0)) / Math.max(lesson.roundsRequired, 1)) * 100
+    : (completed / Math.max(total, 1)) * 100;
+  lessonProgressFillEl.style.width = `${Math.max(0, Math.min(100, fill))}%`;
+  lessonTitleEl.textContent = lesson.title;
 }
 
 function updateChallengePrompt(message) {
   challengePromptEl.innerHTML = message;
 }
 
-function pcToNote(pc) {
-  return NOTE_LIST[((pc % 12) + 12) % 12];
-}
-
 function getAdjacentNote(note, stepSize) {
   const index = NOTE_LIST.indexOf(note);
   if (index === -1) return note;
   return NOTE_LIST[(index + stepSize + NOTE_LIST.length) % NOTE_LIST.length];
+}
+
+function nextMicroIndex(lessonId) {
+  const stats = getLessonStats(lessonId);
+  const current = stats.microIndex || 0;
+  stats.microIndex = current + 1;
+  return current;
 }
 
 function setLessonRound(round) {
@@ -280,11 +342,68 @@ function setLessonRound(round) {
   updateLessonMeta();
 }
 
+function markLessonAttempt(isCorrect) {
+  const lessonId = appState.playerLevel;
+  const stats = getLessonStats(lessonId);
+  stats.totalAttempts += 1;
+
+  if (isCorrect) {
+    stats.totalCorrect += 1;
+    stats.correctStreak += 1;
+  } else {
+    stats.correctStreak = 0;
+    stats.mistakes += 1;
+  }
+
+  saveProgress();
+}
+
+function lessonMasteryReached(lessonId = appState.playerLevel) {
+  const config = getLessonConfig(lessonId);
+  const stats = getLessonStats(lessonId);
+  return (
+    stats.roundsWon >= config.roundsRequired &&
+    getLessonAccuracy(stats) >= config.accuracyRequired &&
+    stats.correctStreak >= config.streakRequired
+  );
+}
+
+function completeLessonRound() {
+  const lessonId = appState.playerLevel;
+  const config = getLessonConfig(lessonId);
+  const stats = getLessonStats(lessonId);
+  stats.roundsWon += 1;
+  appState.streak += 1;
+  appState.score += 10;
+  saveProgress();
+  updateHeaderStats();
+
+  if (lessonMasteryReached(lessonId)) {
+    completeLesson();
+    return;
+  }
+
+  const accuracy = getLessonAccuracy(stats);
+  setFeedback(
+    `Round clear. You have completed <strong>${stats.roundsWon}</strong> of <strong>${config.roundsRequired}</strong> rounds for <strong>${config.title}</strong>. Accuracy: <strong>${accuracy}%</strong>.`,
+    'success',
+    'Round Clear'
+  );
+  updateChallengePrompt(`Keep going. You still need more strong rounds before <strong>${config.title}</strong> is mastered.`);
+  setQuizMessage(`Round won. Press <strong>Restart</strong> for the next micro-lesson.`, 'correct');
+  currentLessonRound = null;
+  updateLessonMeta();
+}
+
 function completeLesson() {
   const currentId = appState.playerLevel;
+  const stats = getLessonStats(currentId);
+  stats.mastered = true;
+
   if (!appState.completedLessons.includes(currentId)) {
     appState.completedLessons.push(currentId);
   }
+
   const nextId = currentId + 1;
   if (nextId <= LESSONS.length && !appState.unlockedLessons.includes(nextId)) {
     appState.unlockedLessons.push(nextId);
@@ -292,26 +411,29 @@ function completeLesson() {
   if (nextId <= LESSONS.length) {
     appState.playerLevel = nextId;
   }
-  appState.streak += 1;
-  appState.score += 10;
+
   saveProgress();
   updateHeaderStats();
   updateLessonMeta();
 
   const nextLesson = LESSONS.find(item => item.id === appState.playerLevel);
-  setFeedback(`Level complete! You earned a new lesson award. ${nextLesson ? `Next up: <strong>${nextLesson.title}</strong>.` : 'You completed all lessons.'}`, 'success', 'Unlocked');
+  setFeedback(
+    `Level complete! You earned a new lesson award. ${nextLesson ? `Next up: <strong>${nextLesson.title}</strong>.` : 'You completed all lessons.'}`,
+    'success',
+    'Unlocked'
+  );
   updateChallengePrompt(`Award earned. ${nextLesson ? `You unlocked <strong>${nextLesson.title}</strong>.` : 'You mastered the current learning path.'}`);
-  setQuizMessage(`Great work. Your next lesson is now unlocked.`, 'correct');
+  setQuizMessage('Great work. Your next lesson is now unlocked.', 'correct');
   currentLessonRound = null;
 }
 
 function buildLessonRound() {
   const lessonId = appState.playerLevel;
-  const lesson = getCurrentLesson();
+  const microIndex = nextMicroIndex(lessonId);
 
   switch (lessonId) {
     case 1: {
-      const target = NATURAL_NOTES[Math.floor(Math.random() * NATURAL_NOTES.length)];
+      const target = NATURAL_NOTES[microIndex % NATURAL_NOTES.length];
       return {
         lessonId,
         type: 'single-note',
@@ -326,7 +448,7 @@ function buildLessonRound() {
       };
     }
     case 2: {
-      const target = NATURAL_NOTES[Math.floor(Math.random() * NATURAL_NOTES.length)];
+      const target = NATURAL_NOTES[microIndex % NATURAL_NOTES.length];
       return {
         lessonId,
         type: 'multi-note',
@@ -341,7 +463,7 @@ function buildLessonRound() {
       };
     }
     case 3: {
-      const target = SHARP_NOTES[Math.floor(Math.random() * SHARP_NOTES.length)];
+      const target = SHARP_NOTES[microIndex % SHARP_NOTES.length];
       const left = NOTE_LIST[(NOTE_LIST.indexOf(target) + 11) % 12];
       const right = NOTE_LIST[(NOTE_LIST.indexOf(target) + 1) % 12];
       return {
@@ -358,7 +480,8 @@ function buildLessonRound() {
       };
     }
     case 4: {
-      const root = ['C', 'D', 'E', 'F', 'G', 'A'][Math.floor(Math.random() * 6)];
+      const roots = ['C', 'D', 'E', 'F', 'G', 'A'];
+      const root = roots[microIndex % roots.length];
       const answer = getAdjacentNote(root, 1);
       return {
         lessonId,
@@ -374,7 +497,8 @@ function buildLessonRound() {
       };
     }
     case 5: {
-      const root = ['C', 'D', 'F', 'G', 'A'][Math.floor(Math.random() * 5)];
+      const roots = ['C', 'D', 'F', 'G', 'A'];
+      const root = roots[microIndex % roots.length];
       const answer = getAdjacentNote(root, 2);
       return {
         lessonId,
@@ -390,17 +514,19 @@ function buildLessonRound() {
       };
     }
     case 6: {
-      const root = rootNoteEl.value;
-      const pattern = PATTERNS[scaleTypeEl.value];
-      const answer = getAdjacentNote(root, pattern[0]);
+      const roots = ['C', 'D', 'F', 'G'];
+      const localRoot = roots[microIndex % roots.length];
+      const localType = microIndex % 2 === 0 ? 'major' : 'minor';
+      const pattern = PATTERNS[localType];
+      const answer = getAdjacentNote(localRoot, pattern[0]);
       return {
         lessonId,
         type: 'single-note',
-        prompt: `Lesson 6: Patterns tell you how to move. For <strong>${root} ${getScaleTypeLabel(scaleTypeEl.value)}</strong>, the first move is a <strong>${pattern[0] === 2 ? 'whole step' : 'half step'}</strong>. Tap the next note.`,
-        feedback: `Read the pattern and make the first move from <strong>${root}</strong>.`,
-        quizText: `Pattern: ${PATTERN_LABELS[scaleTypeEl.value]}. Tap the first note after ${root}.`,
+        prompt: `Lesson 6: Patterns tell you how to move. For <strong>${localRoot} ${getScaleTypeLabel(localType)}</strong>, the first move is a <strong>${pattern[0] === 2 ? 'whole step' : 'half step'}</strong>. Tap the next note.`,
+        feedback: `Read the pattern and make the first move from <strong>${localRoot}</strong>.`,
+        quizText: `Pattern: ${PATTERN_LABELS[localType]}. Tap the first note after ${localRoot}.`,
         targetNotes: [answer],
-        displayNotes: [root, '___', '•'],
+        displayNotes: [localRoot, '___', '•'],
         progressCurrent: 0,
         progressTotal: 1,
         successMessage: `Nice. You followed the pattern correctly to <strong>${answer}</strong>.`
@@ -413,8 +539,14 @@ function buildLessonRound() {
 
 function startLessonMode() {
   appState.mode = 'lesson';
-  builderState.active = false;
-  builderState.completed = false;
+  builderState = {
+    active: false,
+    expectedIndex: 0,
+    userNotes: [],
+    completed: false,
+    attempts: 0,
+    mistakes: 0
+  };
   currentQuiz = null;
   targetScale = getScale(rootNoteEl.value, scaleTypeEl.value);
   renderPattern(scaleTypeEl.value);
@@ -485,7 +617,6 @@ function startBuildMode() {
     updateChallengePrompt('Scale Builder is locked until interval patterns are mastered.');
     setFeedback('Complete the lesson flow first: notes, sharps, half steps, whole steps, and patterns.', 'warning', 'Locked');
     setQuizMessage('Scale Builder is still locked. Use the lesson path to unlock it.', 'wrong');
-    appState.mode = 'lesson';
     startLessonMode();
     return;
   }
@@ -495,7 +626,9 @@ function startBuildMode() {
     active: true,
     expectedIndex: 0,
     userNotes: [],
-    completed: false
+    completed: false,
+    attempts: 0,
+    mistakes: 0
   };
   currentQuiz = null;
   currentLessonRound = null;
@@ -543,7 +676,7 @@ function renderQuizPrompt() {
   const prompt = `Complete the <strong>${currentQuiz.root} ${currentQuiz.typeLabel}</strong> scale by tapping the missing note on the piano.`;
   setQuizMessage(`${prompt}<div class="quiz-scale">${currentQuiz.promptScale.join('  ')}</div>`, 'prompt');
   updateChallengePrompt(prompt);
-  setFeedback(`Tap the missing note. The hidden note belongs where the blank appears in the scale.`, 'prompt', 'Quiz');
+  setFeedback('Tap the missing note. The hidden note belongs where the blank appears in the scale.', 'prompt', 'Quiz');
   resetRoundStates(pianoContainerEl, { keepScaleState: false });
   lockCompletedKeys(pianoContainerEl, currentQuiz.promptScale.filter(note => note !== '___'));
   setTargetKey(pianoContainerEl, currentQuiz.answer);
@@ -577,24 +710,19 @@ function handleLessonTap(note) {
 
   const valid = currentLessonRound.targetNotes.includes(note);
   clearSelectionFeedback(pianoContainerEl);
+  markLessonAttempt(valid);
 
   if (valid) {
     setCorrectKey(pianoContainerEl, note);
     setCompletedKey(pianoContainerEl, note);
     currentLessonRound.progressCurrent = currentLessonRound.progressTotal;
     currentLessonRound.completedCount = currentLessonRound.displayNotes.length;
-    appState.streak += 1;
     updateHeaderStats();
     renderScaleNotes([]);
     setFeedback(currentLessonRound.successMessage, 'success', 'Correct');
     updateChallengePrompt(`Nice work. ${currentLessonRound.successMessage}`);
-    setQuizMessage('Lesson clear. Press Restart for another lesson round, or keep going to unlock the next award.', 'correct');
-
-    if (!appState.completedLessons.includes(currentLessonRound.lessonId)) {
-      completeLesson();
-    } else {
-      saveProgress();
-    }
+    setQuizMessage('Round clear. Press Restart for the next micro-lesson.', 'correct');
+    completeLessonRound();
     return;
   }
 
@@ -604,6 +732,7 @@ function handleLessonTap(note) {
   setFeedback(`Not quite. <strong>${note}</strong> is not the target for this lesson.`, 'wrong', 'Try Again');
   updateChallengePrompt(currentLessonRound.prompt);
   setQuizMessage(`Try again. ${currentLessonRound.feedback}`, 'wrong');
+  updateLessonMeta();
 }
 
 function completeQuizRound() {
@@ -616,7 +745,7 @@ function completeQuizRound() {
 function handleBuildTap(note) {
   const expectedNote = targetScale[builderState.expectedIndex];
   const isCorrect = note === expectedNote;
-
+  builderState.attempts += 1;
   clearSelectionFeedback(pianoContainerEl);
 
   if (isCorrect) {
@@ -641,6 +770,7 @@ function handleBuildTap(note) {
     return;
   }
 
+  builderState.mistakes += 1;
   appState.streak = 0;
   updateHeaderStats();
   setWrongKey(pianoContainerEl, note);
@@ -733,12 +863,14 @@ function showHint() {
 
 function openLessonMap() {
   const lessonSummary = LESSONS.map(lesson => {
+    const stats = getLessonStats(lesson.id);
+    const accuracy = getLessonAccuracy(stats);
     const state = appState.completedLessons.includes(lesson.id)
       ? '⭐ Mastered'
       : appState.unlockedLessons.includes(lesson.id)
         ? '▶ Available'
         : '🔒 Locked';
-    return `${lesson.id}. ${lesson.title} — ${state}`;
+    return `${lesson.id}. ${lesson.title} — ${state} • ${stats.roundsWon}/${lesson.roundsRequired} rounds • ${accuracy}%`; 
   }).join('<br>');
 
   setFeedback(`Lesson Map<br>${lessonSummary}`, 'prompt', 'Map');
