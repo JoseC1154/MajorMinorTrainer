@@ -1,5 +1,7 @@
 <!-- FILE: README.md -->
 
+https://josec1154.github.io/MajorMinorTrainer/
+
 # Scale Builder Improvement Plan
 
 ## Vision
