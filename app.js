@@ -39,11 +39,9 @@ const LESSONS = [
 
 const rootNoteEl = document.getElementById('rootNote');
 const scaleTypeEl = document.getElementById('scaleType');
-const buildScaleBtn = document.getElementById('buildScale');
 const patternDisplayEl = document.getElementById('patternDisplay');
 const scaleNotesEl = document.getElementById('scaleNotes');
 const pianoContainerEl = document.getElementById('pianoContainer');
-const startQuizBtn = document.getElementById('startQuiz');
 const quizAreaEl = document.getElementById('quizArea');
 
 const playerLevelEl = document.getElementById('playerLevel');
@@ -55,9 +53,18 @@ const challengePromptEl = document.getElementById('challengePrompt');
 const persistentFeedbackEl = document.getElementById('persistentFeedback');
 const feedbackBadgeEl = document.getElementById('feedbackBadge');
 const lessonTitleEl = document.getElementById('lessonTitle');
+const lessonAccuracyEl = document.getElementById('lessonAccuracy');
+const lessonRoundsEl = document.getElementById('lessonRounds');
+const lessonMasteryEl = document.getElementById('lessonMastery');
 const feedbackStripEl = persistentFeedbackEl?.closest('.feedback-strip');
 const challengeCardEl = challengePromptEl?.closest('.challenge-card');
-const restartRoundBtn = document.getElementById('restartRound');
+const keyControlsPanelEl = document.getElementById('keyControlsPanel');
+const keyControlsLockNoteEl = document.getElementById('keyControlsLockNote');
+const patternPanelEl = document.getElementById('patternPanel');
+const quizPanelEl = document.getElementById('quizPanel');
+const scalePanelEl = document.getElementById('scalePanel');
+const primaryActionBtn = document.getElementById('primaryAction');
+const secondaryActionBtn = document.getElementById('secondaryAction');
 const hintButtonEl = document.getElementById('hintButton');
 const openLessonMapBtn = document.getElementById('openLessonMap');
 
@@ -268,6 +275,55 @@ function updateHeaderStats() {
   playerStreakEl.textContent = String(appState.streak);
 }
 
+function setPanelVisible(panelEl, isVisible) {
+  if (!panelEl) return;
+  panelEl.hidden = !isVisible;
+  panelEl.classList.toggle('is-collapsed', !isVisible);
+}
+
+function updateUnlockedUi() {
+  const keyControlsUnlocked = appState.completedLessons.includes(6) || appState.playerLevel >= 7;
+  rootNoteEl.disabled = !keyControlsUnlocked;
+  scaleTypeEl.disabled = !keyControlsUnlocked;
+  keyControlsPanelEl?.classList.toggle('is-locked', !keyControlsUnlocked);
+  keyControlsPanelEl?.setAttribute('aria-disabled', String(!keyControlsUnlocked));
+  if (keyControlsLockNoteEl) {
+    keyControlsLockNoteEl.textContent = keyControlsUnlocked
+      ? 'Key choice unlocked. You can now change the root note and scale type.'
+      : 'Key choice unlocks later as a reward after lesson mastery.';
+  }
+
+  const patternUnlocked = appState.completedLessons.includes(5) || appState.playerLevel >= 6 || appState.mode !== 'lesson';
+  const quizUnlocked = appState.completedLessons.includes(6) || appState.playerLevel >= 7 || appState.mode === 'quiz';
+  setPanelVisible(patternPanelEl, patternUnlocked);
+  setPanelVisible(quizPanelEl, quizUnlocked);
+  setPanelVisible(scalePanelEl, true);
+}
+
+function updateActionButtons() {
+  if (!primaryActionBtn || !secondaryActionBtn) return;
+
+  if (appState.mode === 'lesson') {
+    primaryActionBtn.textContent = currentLessonRound ? 'Start Lesson' : 'Continue';
+    secondaryActionBtn.textContent = 'Next';
+    secondaryActionBtn.disabled = false;
+    return;
+  }
+
+  if (appState.mode === 'build') {
+    primaryActionBtn.textContent = builderState.completed ? 'Play Quiz' : 'Build Scale';
+    secondaryActionBtn.textContent = builderState.completed ? 'Next' : 'Restart';
+    secondaryActionBtn.disabled = false;
+    return;
+  }
+
+  if (appState.mode === 'quiz') {
+    primaryActionBtn.textContent = currentQuiz ? 'Quiz Round' : 'Next Quiz';
+    secondaryActionBtn.textContent = 'Next';
+    secondaryActionBtn.disabled = false;
+  }
+}
+
 function getProgressNumbers() {
   if (appState.mode === 'lesson' && currentLessonRound) {
     return {
@@ -304,6 +360,19 @@ function updateLessonMeta() {
     : (completed / Math.max(total, 1)) * 100;
   lessonProgressFillEl.style.width = `${Math.max(0, Math.min(100, fill))}%`;
   lessonTitleEl.textContent = lesson.title;
+
+  if (lessonAccuracyEl) lessonAccuracyEl.textContent = `${accuracy}%`;
+  if (lessonRoundsEl) lessonRoundsEl.textContent = `${stats.roundsWon} / ${lesson.roundsRequired}`;
+  if (lessonMasteryEl) {
+    lessonMasteryEl.textContent = appState.completedLessons.includes(lesson.id)
+      ? 'Mastered'
+      : appState.unlockedLessons.includes(lesson.id)
+        ? 'In Progress'
+        : 'Locked';
+  }
+
+  updateUnlockedUi();
+  updateActionButtons();
 }
 
 function updateChallengePrompt(message) {
@@ -390,7 +459,7 @@ function completeLessonRound() {
     'Round Clear'
   );
   updateChallengePrompt(`Keep going. You still need more strong rounds before <strong>${config.title}</strong> is mastered.`);
-  setQuizMessage(`Round won. Press <strong>Restart</strong> for the next micro-lesson.`, 'correct');
+  setQuizMessage('Round won. Tap <strong>Next</strong> to continue to the next micro-lesson.', 'correct');
   currentLessonRound = null;
   updateLessonMeta();
 }
@@ -552,13 +621,13 @@ function startLessonMode() {
   renderPattern(scaleTypeEl.value);
 
   if (appState.playerLevel >= 7) {
-    updateChallengePrompt('You unlocked Scale Builder. Press <strong>Build</strong> to construct a full scale or <strong>Quiz</strong> for a piano challenge.');
-    setFeedback('All core lessons are unlocked. You can now use full scale building.', 'success', 'Ready');
-    setQuizMessage('Lesson path complete. Build and Quiz are now your main game modes.', 'correct');
     currentLessonRound = null;
-    updateLessonMeta();
+    updateChallengePrompt('You unlocked Scale Builder. Use Build to construct a full scale or Next to move into piano quiz play.');
+    setFeedback('All core lessons are unlocked. You can now use free key choice, scale building, and piano quiz play.', 'success', 'Ready');
+    setQuizMessage('Lesson path complete. Build and Quiz are now your main game modes.', 'correct');
     renderScaleNotes([]);
     resetRoundStates(pianoContainerEl, { keepScaleState: false });
+    updateLessonMeta();
     return;
   }
 
@@ -639,6 +708,7 @@ function startBuildMode() {
   renderScaleNotes(targetScale, 0);
   renderBuildPrompt();
   saveProgress();
+  updateLessonMeta();
 }
 
 function getQuizQuestion() {
@@ -703,6 +773,7 @@ function startQuiz() {
   currentQuiz = getQuizQuestion();
   renderQuizPrompt();
   saveProgress();
+  updateLessonMeta();
 }
 
 function handleLessonTap(note) {
@@ -792,7 +863,7 @@ function handleQuizTap(note) {
     setCompletedKey(pianoContainerEl, note);
     completeQuizRound();
     setFeedback(`Correct! <strong>${currentQuiz.answer}</strong> is the missing note in the scale.`, 'success', 'Correct');
-    updateChallengePrompt(`Great job. You found the missing note: <strong>${currentQuiz.answer}</strong>. Press Quiz for another round.`);
+    updateChallengePrompt(`Great job. You found the missing note: <strong>${currentQuiz.answer}</strong>. Tap <strong>Next</strong> for another quiz round.`);
     setQuizMessage(`Correct! <strong>${currentQuiz.answer}</strong> completes the ${currentQuiz.root} ${currentQuiz.typeLabel} scale.`, 'correct');
     currentQuiz = null;
     renderScaleNotes(targetScale, targetScale.length);
@@ -826,11 +897,51 @@ function handlePianoSelection({ note }) {
   handleBuildTap(note);
 }
 
-function restartCurrentRound() {
+function handlePrimaryAction() {
+  if (appState.mode === 'lesson') {
+    if (appState.playerLevel >= 7) {
+      startBuildMode();
+      return;
+    }
+    startLessonMode();
+    return;
+  }
+
+  if (appState.mode === 'build') {
+    if (builderState.completed) {
+      startQuiz();
+      return;
+    }
+    startBuildMode();
+    return;
+  }
+
+  if (appState.mode === 'quiz') {
+    if (!currentQuiz) {
+      startQuiz();
+    }
+  }
+}
+
+function handleSecondaryAction() {
   if (appState.mode === 'lesson') {
     startLessonMode();
     return;
   }
+
+  if (appState.mode === 'build') {
+    if (builderState.completed) {
+      startLessonMode();
+      return;
+    }
+    startBuildMode();
+    return;
+  }
+
+  if (appState.mode === 'quiz') {
+    startQuiz();
+  }
+}
   if (appState.mode === 'quiz') {
     startQuiz();
     return;
@@ -878,9 +989,8 @@ function openLessonMap() {
   setQuizMessage('Lesson map opened in the feedback area. A dedicated map screen can be added next.', 'prompt');
 }
 
-buildScaleBtn.addEventListener('click', startBuildMode);
-startQuizBtn.addEventListener('click', startQuiz);
-restartRoundBtn?.addEventListener('click', restartCurrentRound);
+primaryActionBtn?.addEventListener('click', handlePrimaryAction);
+secondaryActionBtn?.addEventListener('click', handleSecondaryAction);
 hintButtonEl?.addEventListener('click', showHint);
 openLessonMapBtn?.addEventListener('click', openLessonMap);
 
