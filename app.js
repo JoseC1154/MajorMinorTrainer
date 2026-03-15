@@ -304,23 +304,26 @@ function updateActionButtons() {
   if (!primaryActionBtn || !secondaryActionBtn) return;
 
   if (appState.mode === 'lesson') {
-    primaryActionBtn.textContent = currentLessonRound ? 'Start Lesson' : 'Continue';
-    secondaryActionBtn.textContent = 'Next';
-    secondaryActionBtn.disabled = false;
+    primaryActionBtn.textContent = currentLessonRound ? 'Lesson' : 'Continue';
+    primaryActionBtn.disabled = !!currentLessonRound;
+    secondaryActionBtn.textContent = currentLessonRound ? 'Next' : 'Next';
+    secondaryActionBtn.disabled = !!currentLessonRound;
     return;
   }
 
   if (appState.mode === 'build') {
-    primaryActionBtn.textContent = builderState.completed ? 'Play Quiz' : 'Build Scale';
+    primaryActionBtn.textContent = builderState.completed ? 'Play Quiz' : 'Build';
+    primaryActionBtn.disabled = !builderState.completed;
     secondaryActionBtn.textContent = builderState.completed ? 'Next' : 'Restart';
     secondaryActionBtn.disabled = false;
     return;
   }
 
   if (appState.mode === 'quiz') {
-    primaryActionBtn.textContent = currentQuiz ? 'Quiz Round' : 'Next Quiz';
+    primaryActionBtn.textContent = currentQuiz ? 'Quiz' : 'Next Quiz';
+    primaryActionBtn.disabled = !!currentQuiz;
     secondaryActionBtn.textContent = 'Next';
-    secondaryActionBtn.disabled = false;
+    secondaryActionBtn.disabled = !!currentQuiz;
   }
 }
 
@@ -792,7 +795,7 @@ function handleLessonTap(note) {
     renderScaleNotes([]);
     setFeedback(currentLessonRound.successMessage, 'success', 'Correct');
     updateChallengePrompt(`Nice work. ${currentLessonRound.successMessage}`);
-    setQuizMessage('Round clear. Press Restart for the next micro-lesson.', 'correct');
+    setQuizMessage('Round clear. Tap <strong>Next</strong> for the next micro-lesson.', 'correct');
     completeLessonRound();
     return;
   }
@@ -806,7 +809,7 @@ function handleLessonTap(note) {
   updateLessonMeta();
 }
 
-function completeQuizRound() {
+function completeQuizRound()() {
   appState.streak += 1;
   appState.score += 5;
   saveProgress();
@@ -903,7 +906,9 @@ function handlePrimaryAction() {
       startBuildMode();
       return;
     }
-    startLessonMode();
+    if (!currentLessonRound) {
+      startLessonMode();
+    }
     return;
   }
 
@@ -912,7 +917,6 @@ function handlePrimaryAction() {
       startQuiz();
       return;
     }
-    startBuildMode();
     return;
   }
 
@@ -941,12 +945,6 @@ function handleSecondaryAction() {
   if (appState.mode === 'quiz') {
     startQuiz();
   }
-}
-  if (appState.mode === 'quiz') {
-    startQuiz();
-    return;
-  }
-  startBuildMode();
 }
 
 function showHint() {
