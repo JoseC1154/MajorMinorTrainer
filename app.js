@@ -1,11 +1,20 @@
 // FILE: app.js
 
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const WHITE_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+import {
+  NOTE_LIST,
+  generatePianoKeys,
+  attachPianoNoteHandlers,
+  clearSelectionFeedback,
+  markSelectedKey,
+  highlightQuestionNote,
+  clearQuestionHighlight
+} from './piano.js';
+
 const PATTERNS = {
   major: [2, 2, 1, 2, 2, 2, 1],
   minor: [2, 1, 2, 2, 1, 2, 2]
 };
+
 const PATTERN_LABELS = {
   major: 'W W H W W W H',
   minor: 'W H W W H W W'
@@ -20,106 +29,160 @@ const pianoContainerEl = document.getElementById('pianoContainer');
 const startQuizBtn = document.getElementById('startQuiz');
 const quizAreaEl = document.getElementById('quizArea');
 
-let currentScale = [];
+let targetScale = [];
+let builderState = {
+  active: false,
+  expectedIndex: 0,
+  userNotes: [],
+  completed: false
+};
+
 let currentQuiz = null;
 
 function getScale(root, type) {
   const pattern = PATTERNS[type];
-  const startIndex = NOTES.indexOf(root);
+  const startIndex = NOTE_LIST.indexOf(root);
 
-  if (startIndex === -1) return [];
+  if (startIndex === -1 || !pattern) return [];
 
   const scale = [root];
   let currentIndex = startIndex;
 
-  for (let i = 0; i < pattern.length - 1; i++) {
-    currentIndex = (currentIndex + pattern[i]) % NOTES.length;
-    scale.push(NOTES[currentIndex]);
+  for (let i = 0; i < pattern.length - 1; i += 1) {
+    currentIndex = (currentIndex + pattern[i]) % NOTE_LIST.length;
+    scale.push(NOTE_LIST[currentIndex]);
   }
 
   return scale;
+}
+
+function getScaleTypeLabel(type) {
+  return type === 'major' ? 'Major' : 'Natural Minor';
 }
 
 function renderPattern(type) {
   patternDisplayEl.textContent = PATTERN_LABELS[type] || '';
 }
 
-function renderScaleNotes(scale) {
+function renderScaleNotes(scale, builtCount = 0) {
   scaleNotesEl.innerHTML = '';
 
   if (!scale.length) {
-    scaleNotesEl.textContent = 'No scale to display yet.';
+    scaleNotesEl.textContent = 'Choose a root and press Build Scale to begin.';
     return;
   }
 
-  scale.forEach(note => {
+  scale.forEach((note, index) => {
     const noteEl = document.createElement('div');
     noteEl.className = 'note';
-    noteEl.textContent = note;
+
+    if (builtCount > 0 && index < builtCount) {
+      noteEl.textContent = note;
+      noteEl.classList.add('note-complete');
+    } else if (builderState.active && !builderState.completed) {
+      noteEl.textContent = index === builtCount ? '___' : '•';
+      noteEl.classList.add(index === builtCount ? 'note-current' : 'note-hidden');
+    } else {
+      noteEl.textContent = note;
+    }
+
     scaleNotesEl.appendChild(noteEl);
   });
 }
 
-function createPiano() {
-  pianoContainerEl.innerHTML = '';
-
-  WHITE_NOTES.forEach(note => {
-    const whiteKey = document.createElement('div');
-    whiteKey.className = 'white-key';
-    whiteKey.dataset.note = note;
-    whiteKey.title = note;
-
-    if (note === 'C') addBlackKey(whiteKey, 'C#');
-    if (note === 'D') addBlackKey(whiteKey, 'D#');
-    if (note === 'F') addBlackKey(whiteKey, 'F#');
-    if (note === 'G') addBlackKey(whiteKey, 'G#');
-    if (note === 'A') addBlackKey(whiteKey, 'A#');
-
-    pianoContainerEl.appendChild(whiteKey);
-  });
+function setQuizMessage(html, className = '') {
+  quizAreaEl.innerHTML = `<div class="builder-feedback ${className}">${html}</div>`;
 }
 
-function addBlackKey(parentKey, noteName) {
-  const blackKey = document.createElement('div');
-  blackKey.className = 'black-key';
-  blackKey.dataset.note = noteName;
-  blackKey.title = noteName;
-  parentKey.appendChild(blackKey);
+function renderBuildPrompt() {
+  if (!targetScale.length) {
+    setQuizMessage('Choose a root and scale type, then press <strong>Build Scale</strong>.');
+    return;
+  }
+
+  if (builderState.completed) {
+    setQuizMessage(
+      `Excellent! You built the <strong>${rootNoteEl.value} ${getScaleTypeLabel(scaleTypeEl.value)}</strong> scale: ${targetScale.join(' - ')}.`,
+      'correct'
+    );
+    clearQuestionHighlight(pianoContainerEl);
+    return;
+  }
+
+  const expectedNote = targetScale[builderState.expectedIndex];
+  const previousNote = builderState.expectedIndex === 0 ? null : targetScale[builderState.expectedIndex - 1];
+  const stepWord = builderState.expectedIndex === 0
+    ? 'Start on the root note.'
+    : `From ${previousNote}, move a <strong>${getStepLabel(builderState.expectedIndex - 1)}</strong>.`;
+
+  setQuizMessage(
+    `<strong>${rootNoteEl.value} ${getScaleTypeLabel(scaleTypeEl.value)}</strong><br>${stepWord}<br>Click the piano key for note <strong>${builderState.expectedIndex + 1}</strong> of the scale.`,
+    'prompt'
+  );
+
+  highlightQuestionNote(pianoContainerEl, expectedNote);
 }
 
-function highlightScaleOnPiano(scale) {
-  const allKeys = pianoContainerEl.querySelectorAll('.white-key, .black-key');
+function getStepLabel(stepIndex) {
+  const pattern = PATTERNS[scaleTypeEl.value] || [];
+  const value = pattern[stepIndex];
+  return value === 2 ? 'whole step' : 'half step';
+}
 
-  allKeys.forEach(key => {
-    key.classList.remove('key-active');
-  });
+function startBuildMode() {
+  targetScale = getScale(rootNoteEl.value, scaleTypeEl.value);
+  builderState = {
+    active: true,
+    expectedIndex: 0,
+    userNotes: [],
+    completed: false
+  };
+  currentQuiz = null;
 
-  allKeys.forEach(key => {
-    const keyNote = key.dataset.note;
-    if (scale.includes(keyNote)) {
-      key.classList.add('key-active');
+  renderPattern(scaleTypeEl.value);
+  clearSelectionFeedback(pianoContainerEl);
+  renderScaleNotes(targetScale, 0);
+  renderBuildPrompt();
+}
+
+function handlePianoSelection({ note }) {
+  if (!builderState.active || builderState.completed || !targetScale.length) return;
+
+  const expectedNote = targetScale[builderState.expectedIndex];
+  const isCorrect = note === expectedNote;
+
+  clearSelectionFeedback(pianoContainerEl);
+  markSelectedKey(pianoContainerEl, note, isCorrect);
+
+  if (isCorrect) {
+    builderState.userNotes.push(note);
+    builderState.expectedIndex += 1;
+
+    if (builderState.expectedIndex >= targetScale.length) {
+      builderState.completed = true;
+      renderScaleNotes(targetScale, targetScale.length);
+      renderBuildPrompt();
+      return;
     }
-  });
-}
 
-function buildCurrentScale() {
-  const root = rootNoteEl.value;
-  const type = scaleTypeEl.value;
+    renderScaleNotes(targetScale, builderState.expectedIndex);
+    renderBuildPrompt();
+    return;
+  }
 
-  currentScale = getScale(root, type);
-  renderPattern(type);
-  renderScaleNotes(currentScale);
-  highlightScaleOnPiano(currentScale);
-  renderQuizPrompt();
+  const previousNote = builderState.expectedIndex === 0 ? rootNoteEl.value : targetScale[builderState.expectedIndex - 1];
+  setQuizMessage(
+    `Not quite. You clicked <strong>${note}</strong>. The next correct note after <strong>${previousNote}</strong> should follow a <strong>${builderState.expectedIndex === 0 ? 'root start' : getStepLabel(builderState.expectedIndex - 1)}</strong>. Try again.`,
+    'wrong'
+  );
 }
 
 function getQuizQuestion() {
-  if (!currentScale.length) return null;
+  if (!targetScale.length) return null;
 
-  const typeLabel = scaleTypeEl.value === 'major' ? 'major' : 'natural minor';
-  const hiddenIndex = Math.floor(Math.random() * currentScale.length);
-  const answer = currentScale[hiddenIndex];
-  const promptScale = [...currentScale];
+  const hiddenIndex = Math.floor(Math.random() * targetScale.length);
+  const answer = targetScale[hiddenIndex];
+  const promptScale = [...targetScale];
   promptScale[hiddenIndex] = '___';
 
   return {
@@ -127,18 +190,18 @@ function getQuizQuestion() {
     answer,
     promptScale,
     root: rootNoteEl.value,
-    typeLabel
+    typeLabel: scaleTypeEl.value === 'major' ? 'major' : 'natural minor'
   };
 }
 
 function renderQuizPrompt() {
-  if (!currentScale.length) {
-    quizAreaEl.innerHTML = '<p>Build a scale first, then start practicing.</p>';
+  if (!targetScale.length) {
+    setQuizMessage('Build a scale first, then start practicing.');
     return;
   }
 
   if (!currentQuiz) {
-    quizAreaEl.innerHTML = '<p>Press <strong>Start Quiz</strong> to hide one note from the scale.</p>';
+    setQuizMessage('Press <strong>Start Quiz</strong> to hide one note from the scale.');
     return;
   }
 
@@ -192,10 +255,15 @@ function renderQuizPrompt() {
 }
 
 function startQuiz() {
-  if (!currentScale.length) {
-    buildCurrentScale();
+  if (!targetScale.length) {
+    targetScale = getScale(rootNoteEl.value, scaleTypeEl.value);
   }
 
+  builderState.active = false;
+  builderState.completed = false;
+  clearQuestionHighlight(pianoContainerEl);
+  clearSelectionFeedback(pianoContainerEl);
+  renderScaleNotes(targetScale, targetScale.length);
   currentQuiz = getQuizQuestion();
   renderQuizPrompt();
 }
@@ -214,7 +282,7 @@ function checkQuizAnswer() {
     feedback.textContent = `Correct! The missing note is ${currentQuiz.answer}.`;
     feedback.className = 'quiz-feedback correct';
   } else {
-    feedback.textContent = `Not quite. Try again.`;
+    feedback.textContent = 'Not quite. Try again.';
     feedback.className = 'quiz-feedback wrong';
   }
 }
@@ -229,13 +297,24 @@ function revealQuizAnswer() {
   feedback.className = 'quiz-feedback';
 }
 
-buildScaleBtn.addEventListener('click', buildCurrentScale);
+buildScaleBtn.addEventListener('click', startBuildMode);
 startQuizBtn.addEventListener('click', startQuiz);
 scaleTypeEl.addEventListener('change', () => {
   renderPattern(scaleTypeEl.value);
+  if (!builderState.active) {
+    targetScale = getScale(rootNoteEl.value, scaleTypeEl.value);
+    renderScaleNotes(targetScale, 0);
+  }
+});
+rootNoteEl.addEventListener('change', () => {
+  if (!builderState.active) {
+    targetScale = getScale(rootNoteEl.value, scaleTypeEl.value);
+    renderScaleNotes(targetScale, 0);
+  }
 });
 
-createPiano();
+generatePianoKeys(pianoContainerEl, { octaveCount: 2 });
+attachPianoNoteHandlers(pianoContainerEl, handlePianoSelection);
 renderPattern(scaleTypeEl.value);
 renderScaleNotes([]);
-quizAreaEl.innerHTML = '<p>Build a scale first, then start practicing.</p>';
+renderBuildPrompt();
