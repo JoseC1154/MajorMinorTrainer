@@ -13,72 +13,134 @@
 </head>
 <body>
 
-  <header class="header">
-    <h1>Scale Builder</h1>
-    <p class="subtitle">Learn how to construct major and minor scales</p>
+  <header class="header app-shell-header">
+    <div class="topbar">
+      <div class="brand-block">
+        <h1>Scale Builder</h1>
+        <p class="subtitle">Tap, learn, unlock, and build scales one step at a time</p>
+      </div>
+      <div class="topbar-status" aria-label="Player progress">
+        <div class="status-pill">
+          <span class="status-label">Level</span>
+          <strong id="playerLevel">1</strong>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Streak</span>
+          <strong id="playerStreak">0</strong>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <main class="container">
+  <main class="container mobile-game-layout">
 
-    <section class="controls">
-
-      <div class="control-group">
-        <label for="rootNote">Root Note</label>
-        <select id="rootNote">
-          <option>C</option>
-          <option>C#</option>
-          <option>D</option>
-          <option>D#</option>
-          <option>E</option>
-          <option>F</option>
-          <option>F#</option>
-          <option>G</option>
-          <option>G#</option>
-          <option>A</option>
-          <option>A#</option>
-          <option>B</option>
-        </select>
+    <section class="lesson-card" aria-labelledby="lessonTitle">
+      <div class="lesson-card-head">
+        <div>
+          <p class="eyebrow">Current lesson</p>
+          <h2 id="lessonTitle">Scale Builder Training</h2>
+        </div>
+        <button id="openLessonMap" class="ghost-button" type="button">Lesson Map</button>
       </div>
 
-      <div class="control-group">
-        <label for="scaleType">Scale Type</label>
-        <select id="scaleType">
-          <option value="major">Major</option>
-          <option value="minor">Natural Minor</option>
-        </select>
+      <div class="lesson-progress-wrap">
+        <div class="lesson-progress-meta">
+          <span id="lessonProgressLabel">Progress: 0 / 7</span>
+          <span id="lessonModeLabel">Mode: Guided Build</span>
+        </div>
+        <div class="lesson-progress-bar" aria-hidden="true">
+          <div id="lessonProgressFill" class="lesson-progress-fill"></div>
+        </div>
       </div>
 
-      <button id="buildScale">Build Scale</button>
+      <div class="controls compact-controls">
+        <div class="control-group">
+          <label for="rootNote">Root Note</label>
+          <select id="rootNote">
+            <option>C</option>
+            <option>C#</option>
+            <option>D</option>
+            <option>D#</option>
+            <option>E</option>
+            <option>F</option>
+            <option>F#</option>
+            <option>G</option>
+            <option>G#</option>
+            <option>A</option>
+            <option>A#</option>
+            <option>B</option>
+          </select>
+        </div>
 
+        <div class="control-group">
+          <label for="scaleType">Scale Type</label>
+          <select id="scaleType">
+            <option value="major">Major</option>
+            <option value="minor">Natural Minor</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="challenge-card" aria-live="polite">
+        <p class="eyebrow">Your task</p>
+        <div id="challengePrompt">Choose a root and press Build to begin your guided lesson.</div>
+      </div>
     </section>
 
+    <section class="feedback-strip" aria-labelledby="feedbackHeading">
+      <div class="feedback-strip-head">
+        <h2 id="feedbackHeading">Live Feedback</h2>
+        <span id="feedbackBadge" class="feedback-badge">Waiting</span>
+      </div>
+      <div id="persistentFeedback">Every piano tap should tell the player what happened and what to do next.</div>
+    </section>
 
-    <section class="pattern">
-      <h2>Step Pattern</h2>
+    <section class="pattern mini-panel" aria-labelledby="patternHeading">
+      <div class="panel-head">
+        <h2 id="patternHeading">Pattern</h2>
+        <span class="mini-hint">Whole and half steps</span>
+      </div>
       <div id="patternDisplay">Select a scale to see the pattern</div>
     </section>
 
-
-    <section class="scale">
-      <h2>Scale Notes</h2>
+    <section class="scale mini-panel" aria-labelledby="scaleHeading">
+      <div class="panel-head">
+        <h2 id="scaleHeading">Scale Progress</h2>
+        <span class="mini-hint">Build notes one by one</span>
+      </div>
       <div id="scaleNotes"></div>
     </section>
 
-
-    <section class="piano-section">
-      <h2>Piano View</h2>
-      <div id="pianoContainer" class="piano"></div>
+    <section class="piano-section game-piano-section" aria-labelledby="pianoHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="pianoHeading">Tap the Piano</h2>
+          <p class="panel-subtext">Use the keyboard for every answer. Build mode and quiz mode should both happen here.</p>
+        </div>
+      </div>
+      <div class="piano-scroll-shell">
+        <div id="pianoContainer" class="piano" role="application" aria-label="Interactive piano keyboard"></div>
+      </div>
     </section>
 
-
-    <section class="quiz">
-      <h2>Practice Mode</h2>
-      <button id="startQuiz">Start Quiz</button>
+    <section class="quiz game-panel" aria-labelledby="quizHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="quizHeading">Quiz & Challenge</h2>
+          <p class="panel-subtext">No typing. The player should answer quiz rounds directly on the piano.</p>
+        </div>
+      </div>
       <div id="quizArea"></div>
     </section>
 
   </main>
 
+  <div class="bottom-action-bar" role="toolbar" aria-label="Lesson controls">
+    <button id="buildScale" type="button">Build</button>
+    <button id="startQuiz" type="button">Quiz</button>
+    <button id="restartRound" type="button" class="secondary-action">Restart</button>
+    <button id="hintButton" type="button" class="secondary-action">Hint</button>
+  </div>
 
   <footer class="footer">
     <p>Scale Builder PWA</p>
