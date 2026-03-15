@@ -413,6 +413,70 @@ Users cannot build scales until they reach the final stages.
 
 # Level Progression Design
 
+To enforce learning, the app must include a **progression gate system**. The user cannot manually skip levels. Each level unlocks only when the app detects mastery of the current concept.
+
+### Progression Engine Rules
+
+1. A user starts at **Level 1 (Musical Alphabet)**.
+2. The system tracks performance metrics for each lesson.
+3. When mastery criteria are met, the next level unlocks.
+4. The UI celebrates the unlock with an animation and badge.
+5. Only unlocked lessons appear in the lesson map.
+
+### Performance Metrics
+
+The engine should track:
+
+* accuracy percentage
+* time to answer
+* number of mistakes
+* streak of correct answers
+
+Example mastery requirement:
+
+```
+accuracy ≥ 90%
+AND
+streak ≥ 5
+```
+
+### Level Map UI
+
+The app should visually display a **learning path map** similar to language learning apps.
+
+Example path:
+
+Alphabet → Piano Notes → Sharps → Half Steps → Whole Steps → Patterns → Scales
+
+Locked levels appear faded until unlocked.
+
+### Lesson Completion Feedback
+
+When a lesson is mastered:
+
+* screen celebration animation
+* badge unlocked
+* short success sound
+* progress bar increases
+
+Example message:
+
+"Level Complete — You unlocked Half Steps!"
+
+### Preventing Scale Building Too Early
+
+The **Build Scale mode remains locked** until Level 6 is mastered.
+
+Attempting to access it earlier should show a message:
+
+"Complete the Interval Pattern lesson to unlock Scale Builder."
+
+This ensures the user understands:
+
+letters → notes → sharps → intervals → patterns → scales
+
+before being asked to construct scales.
+
 ## Level 1 — The Musical Alphabet
 
 Goal: Learn the 7 natural note names.
