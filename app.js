@@ -809,7 +809,7 @@ function handleLessonTap(note) {
   updateLessonMeta();
 }
 
-function completeQuizRound()() {
+function completeQuizRound() {
   appState.streak += 1;
   appState.score += 5;
   saveProgress();
