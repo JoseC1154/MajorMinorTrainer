@@ -1,0 +1,99 @@
+<!-- FILE: index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scale Builder</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <meta name="theme-color" content="#111111" />
+</head>
+<body>
+
+  <header class="header">
+    <h1>Scale Builder</h1>
+    <p class="subtitle">Learn how to construct major and minor scales</p>
+  </header>
+
+  <main class="container">
+
+    <section class="controls">
+
+      <div class="control-group">
+        <label for="rootNote">Root Note</label>
+        <select id="rootNote">
+          <option>C</option>
+          <option>C#</option>
+          <option>D</option>
+          <option>D#</option>
+          <option>E</option>
+          <option>F</option>
+          <option>F#</option>
+          <option>G</option>
+          <option>G#</option>
+          <option>A</option>
+          <option>A#</option>
+          <option>B</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="scaleType">Scale Type</label>
+        <select id="scaleType">
+          <option value="major">Major</option>
+          <option value="minor">Natural Minor</option>
+        </select>
+      </div>
+
+      <button id="buildScale">Build Scale</button>
+
+    </section>
+
+
+    <section class="pattern">
+      <h2>Step Pattern</h2>
+      <div id="patternDisplay">Select a scale to see the pattern</div>
+    </section>
+
+
+    <section class="scale">
+      <h2>Scale Notes</h2>
+      <div id="scaleNotes"></div>
+    </section>
+
+
+    <section class="piano-section">
+      <h2>Piano View</h2>
+      <div id="pianoContainer" class="piano"></div>
+    </section>
+
+
+    <section class="quiz">
+      <h2>Practice Mode</h2>
+      <button id="startQuiz">Start Quiz</button>
+      <div id="quizArea"></div>
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+    <p>Scale Builder PWA</p>
+  </footer>
+
+
+  <script src="app.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+
+</body>
+</html>
