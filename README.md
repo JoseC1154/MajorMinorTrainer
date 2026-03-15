@@ -411,6 +411,86 @@ Users cannot build scales until they reach the final stages.
 
 ---
 
+## Lesson Map System (Duolingo‑style progression)
+
+The curriculum should appear as a **visual learning path** instead of a menu of features. Users progress node‑by‑node and unlock the next concept only after mastering the previous one.
+
+Example learning path:
+
+Alphabet → Piano Notes → Sharps → Half Steps → Whole Steps → Patterns → Scales
+
+### Node States
+
+Each lesson node has a visible state:
+
+* 🔒 **Locked** – cannot start yet
+* ▶ **Available** – ready to play
+* ⭐ **Mastered** – concept learned
+
+### Node Design
+
+Each node contains:
+
+* lesson title
+* short description
+* mastery progress
+* reward badge
+
+Example:
+
+```
+Alphabet
+Learn A–G note names
+⭐ Mastered
+```
+
+### Locked Node Behavior
+
+Locked lessons appear dimmed and show the requirement.
+
+Example message:
+
+"Master Whole Steps to unlock Interval Patterns."
+
+### Lesson Structure
+
+Each node contains **3–6 micro‑lessons** that gradually increase difficulty.
+
+Example node: Half Steps
+
+1. Identify half steps
+2. Half step up
+3. Half step down
+4. Mixed challenge
+
+### Completion Flow
+
+When a node is mastered:
+
+1. celebration animation plays
+2. badge unlock appears
+3. next node becomes available
+4. the lesson path scrolls to the new node
+
+### Mastery Criteria
+
+Example mastery rule:
+
+```
+accuracy ≥ 90%
+streak ≥ 5
+```
+
+### Why the Lesson Map Matters
+
+Without a map the app feels like a tool. With a map it becomes a **journey**, where users clearly see:
+
+* what they learned
+* what comes next
+* how far they’ve progressed
+
+---
+
 # Level Progression Design
 
 To enforce learning, the app must include a **progression gate system**. The user cannot manually skip levels. Each level unlocks only when the app detects mastery of the current concept.
