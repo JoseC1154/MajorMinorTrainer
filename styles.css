@@ -404,34 +404,96 @@ button:hover{
   padding:10px 8px;
 }
 
-/* Ensure proper piano key stacking: black keys above white keys */
+/* Ensure proper piano key stacking:/* Piano layout */
+.piano-scroll-shell{
+  margin-top:10px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:2px;
+}
+
+.piano{
+  min-height:230px;
+  height:230px;
+  min-width:740px;
+  position:relative;
+}
+
+.pianoKey{
+  position:absolute;
+  border:none;
+  margin:0;
+  padding:0;
+  cursor:pointer;
+  transition:transform .08s ease, box-shadow .12s ease, opacity .12s ease, filter .12s ease;
+  touch-action:manipulation;
+}
+
+.pianoKey:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+.pianoKey:active{
+  transform:translateY(1px);
+}
+
+/* Base key shapes and stacking */
 .pianoKey.white{
+  background:linear-gradient(to bottom,#ffffff 0%,#eef2f6 100%);
+  border:1px solid #9aa3b2;
+  border-radius:0 0 10px 10px;
   z-index:1;
 }
 
 .pianoKey.black{
-  z-index:2;
+  background:linear-gradient(to bottom,#3a4351 0%,#0d1117 100%);
+  border:1px solid #050608;
+  border-radius:0 0 8px 8px;
+  z-index:3;
 }
 
-.pianoKey.completedKey{
-  box-shadow:inset 0 -10px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.65);
-  background-image:none;
-}
-
-.pianoKey.black.completedKey{
-  background:linear-gradient(to bottom,#2f3440 0%, #0f1115 100%);
-  box-shadow:inset 0 -10px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.65);
-}
-
+/* Keep state styling subtle so keys remain readable */
 .pianoKey.inScale{
-  box-shadow:inset 0 -8px 0 rgba(77,163,255,.28);
+  box-shadow:inset 0 -6px 0 rgba(77,163,255,.18);
 }
 
 .pianoKey.targetKey,
 .pianoKey.questionNote{
-  box-shadow:0 0 0 2px rgba(77,163,255,.95), inset 0 -8px 0 rgba(77,163,255,.22);
+  box-shadow:0 0 0 2px rgba(77,163,255,.85);
+  z-index:4;
 }
 
+.pianoKey.multiTarget{
+  box-shadow:0 0 0 2px rgba(77,163,255,.55);
+  z-index:4;
+}
+
+.pianoKey.selectedCorrect{
+  box-shadow:0 0 0 2px rgba(72,187,120,.9), inset 0 -8px 0 rgba(72,187,120,.18) !important;
+  z-index:5;
+  animation:successPulse .32s ease;
+}
+
+.pianoKey.selectedWrong{
+  box-shadow:0 0 0 2px rgba(245,101,101,.9), inset 0 -8px 0 rgba(245,101,101,.16) !important;
+  z-index:5;
+  animation:wrongShake .22s ease;
+}
+
+.pianoKey.completedKey{
+  box-shadow:inset 0 -8px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.55);
+  z-index:4;
+}
+
+.pianoKey.black.completedKey{
+  background:linear-gradient(to bottom,#3a4351 0%,#0d1117 100%);
+  box-shadow:inset 0 -8px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.55);
+  z-index:4;
+}
+
+/* Never recolor keys fully for state changes */
 .pianoKey.white.targetKey,
 .pianoKey.white.questionNote,
 .pianoKey.white.multiTarget,
@@ -447,38 +509,12 @@ button:hover{
 .pianoKey.black.multiTarget,
 .pianoKey.black.selectedCorrect,
 .pianoKey.black.selectedWrong,
+.pianoKey.black.completedKey,
 .pianoKey.black.inScale{
   background:linear-gradient(to bottom,#3a4351 0%,#0d1117 100%);
 }
 
-.footer{
-  text-align:center;
-  padding:8px 12px 12px;
-  opacity:.6;
-  font-size:.8rem;
-}
-
-@media (min-width:700px){
-  .container{
-    padding:16px 16px calc(var(--bottom-bar-h) + 32px);
-  }
-
-  .lesson-card,
-  .feedback-strip,
-  .mini-panel,
-  .game-panel,
-  .game-piano-section{
-    padding:16px;
-  }
-
-  .controls{
-    grid-template-columns:repeat(2,minmax(160px,220px));
-  }
-}
-
-@media (max-width:600px){
-  .header{
-    padding:12px 12px 10px;
+.footer{    padding:12px 12px 10px;
   }
 
   .topbar{
