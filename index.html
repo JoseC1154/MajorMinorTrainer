@@ -68,10 +68,10 @@
         </div>
       </div>
 
-      <div class="controls compact-controls">
+      <div id="keyControlsPanel" class="controls compact-controls is-locked" aria-label="Key controls" aria-disabled="true">
         <div class="control-group">
           <label for="rootNote">Root Note</label>
-          <select id="rootNote">
+          <select id="rootNote" disabled>
             <option>C</option>
             <option>C#</option>
             <option>D</option>
@@ -89,16 +89,20 @@
 
         <div class="control-group">
           <label for="scaleType">Scale Type</label>
-          <select id="scaleType">
+          <select id="scaleType" disabled>
             <option value="major">Major</option>
             <option value="minor">Natural Minor</option>
           </select>
         </div>
       </div>
 
+      <div id="keyControlsLockNote" class="challenge-subnote" aria-live="polite">
+        Key choice unlocks later as a reward after lesson mastery.
+      </div>
+
       <div class="challenge-card" aria-live="polite">
         <p class="eyebrow">Your task</p>
-        <div id="challengePrompt">Choose a root and press Build to begin your guided lesson.</div>
+        <div id="challengePrompt">Start Lesson to begin your guided lesson.</div>
       </div>
     </section>
 
@@ -110,7 +114,7 @@
       <div id="persistentFeedback">Every piano tap should tell the player what happened and what to do next.</div>
     </section>
 
-    <section class="pattern mini-panel" aria-labelledby="patternHeading">
+    <section id="patternPanel" class="pattern mini-panel is-collapsed" aria-labelledby="patternHeading" hidden>
       <div class="panel-head">
         <h2 id="patternHeading">Pattern</h2>
         <span class="mini-hint">Whole and half steps</span>
@@ -118,7 +122,7 @@
       <div id="patternDisplay">Select a scale to see the pattern</div>
     </section>
 
-    <section class="scale mini-panel" aria-labelledby="scaleHeading">
+    <section id="scalePanel" class="scale mini-panel" aria-labelledby="scaleHeading">
       <div class="panel-head">
         <h2 id="scaleHeading">Scale Progress</h2>
         <span class="mini-hint">Build notes one by one</span>
@@ -138,7 +142,7 @@
       </div>
     </section>
 
-    <section class="quiz game-panel" aria-labelledby="quizHeading">
+    <section id="quizPanel" class="quiz game-panel is-collapsed" aria-labelledby="quizHeading" hidden>
       <div class="panel-head">
         <div>
           <h2 id="quizHeading">Quiz & Challenge</h2>
@@ -151,10 +155,10 @@
   </main>
 
   <div class="bottom-action-bar" role="toolbar" aria-label="Lesson controls">
-    <button id="buildScale" type="button">Build</button>
-    <button id="startQuiz" type="button">Quiz</button>
-    <button id="restartRound" type="button" class="secondary-action">Restart</button>
+    <button id="primaryAction" type="button">Start Lesson</button>
+    <button id="secondaryAction" type="button" class="secondary-action">Next</button>
     <button id="hintButton" type="button" class="secondary-action">Hint</button>
+    <button id="openLessonMap" type="button" class="secondary-action mobile-only-action">Map</button>
   </div>
 
   <footer class="footer">
