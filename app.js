@@ -915,7 +915,6 @@ function handlePrimaryAction() {
   if (appState.mode === 'build') {
     if (builderState.completed) {
       startQuiz();
-      return;
     }
     return;
   }
@@ -924,6 +923,7 @@ function handlePrimaryAction() {
     if (!currentQuiz) {
       startQuiz();
     }
+    return;
   }
 }
 
@@ -936,14 +936,15 @@ function handleSecondaryAction() {
   if (appState.mode === 'build') {
     if (builderState.completed) {
       startLessonMode();
-      return;
+    } else {
+      startBuildMode();
     }
-    startBuildMode();
     return;
   }
 
   if (appState.mode === 'quiz') {
     startQuiz();
+    return;
   }
 }
 
