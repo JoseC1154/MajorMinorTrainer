@@ -404,7 +404,7 @@ button:hover{
   padding:10px 8px;
 }
 
-/* Ensure proper piano key stacking:/* Piano layout */
+/* Piano layout */
 .piano-scroll-shell{
   margin-top:10px;
   overflow-x:auto;
@@ -454,42 +454,42 @@ button:hover{
   z-index:3;
 }
 
-/* Keep state styling subtle so keys remain readable */
+/* Layered piano state system */
 .pianoKey.inScale{
-  box-shadow:inset 0 -6px 0 rgba(77,163,255,.18);
+  box-shadow:inset 0 -4px 0 rgba(77,163,255,.14);
 }
 
 .pianoKey.targetKey,
 .pianoKey.questionNote{
-  box-shadow:0 0 0 2px rgba(77,163,255,.85);
+  box-shadow:0 0 0 2px rgba(77,163,255,.72);
   z-index:4;
 }
 
 .pianoKey.multiTarget{
-  box-shadow:0 0 0 2px rgba(77,163,255,.55);
+  box-shadow:0 0 0 2px rgba(77,163,255,.45);
+  z-index:4;
+}
+
+.pianoKey.completedKey{
+  box-shadow:inset 0 -7px 0 rgba(255,209,102,.36), 0 0 0 1px rgba(255,209,102,.42);
   z-index:4;
 }
 
 .pianoKey.selectedCorrect{
-  box-shadow:0 0 0 2px rgba(72,187,120,.9), inset 0 -8px 0 rgba(72,187,120,.18) !important;
+  box-shadow:0 0 0 2px rgba(72,187,120,.82), inset 0 -7px 0 rgba(72,187,120,.14) !important;
   z-index:5;
   animation:successPulse .32s ease;
 }
 
 .pianoKey.selectedWrong{
-  box-shadow:0 0 0 2px rgba(245,101,101,.9), inset 0 -8px 0 rgba(245,101,101,.16) !important;
+  box-shadow:0 0 0 2px rgba(245,101,101,.82), inset 0 -7px 0 rgba(245,101,101,.12) !important;
   z-index:5;
   animation:wrongShake .22s ease;
 }
 
-.pianoKey.completedKey{
-  box-shadow:inset 0 -8px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.55);
-  z-index:4;
-}
-
 .pianoKey.black.completedKey{
   background:linear-gradient(to bottom,#3a4351 0%,#0d1117 100%);
-  box-shadow:inset 0 -8px 0 rgba(255,209,102,.42), 0 0 0 2px rgba(255,209,102,.55);
+  box-shadow:inset 0 -7px 0 rgba(255,209,102,.36), 0 0 0 1px rgba(255,209,102,.42);
   z-index:4;
 }
 
@@ -514,7 +514,59 @@ button:hover{
   background:linear-gradient(to bottom,#3a4351 0%,#0d1117 100%);
 }
 
-.footer{    padding:12px 12px 10px;
+/* State priority helpers */
+.pianoKey.black.targetKey,
+.pianoKey.black.questionNote,
+.pianoKey.black.multiTarget,
+.pianoKey.black.completedKey{
+  z-index:4;
+}
+
+.pianoKey.black.selectedCorrect,
+.pianoKey.black.selectedWrong{
+  z-index:5;
+}
+
+.pianoKey.white.targetKey,
+.pianoKey.white.questionNote,
+.pianoKey.white.multiTarget,
+.pianoKey.white.completedKey{
+  z-index:2;
+}
+
+.pianoKey.white.selectedCorrect,
+.pianoKey.white.selectedWrong{
+  z-index:2;
+}
+
+.footer{
+  text-align:center;
+  padding:8px 12px 12px;
+  opacity:.6;
+  font-size:.8rem;
+}
+
+@media (min-width:700px){
+  .container{
+    padding:16px 16px calc(var(--bottom-bar-h) + 32px);
+  }
+
+  .lesson-card,
+  .feedback-strip,
+  .mini-panel,
+  .game-panel,
+  .game-piano-section{
+    padding:16px;
+  }
+
+  .controls{
+    grid-template-columns:repeat(2,minmax(160px,220px));
+  }
+}
+
+@media (max-width:600px){
+  .header{
+    padding:12px 12px 10px;
   }
 
   .topbar{
