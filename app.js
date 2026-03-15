@@ -55,6 +55,8 @@ const challengePromptEl = document.getElementById('challengePrompt');
 const persistentFeedbackEl = document.getElementById('persistentFeedback');
 const feedbackBadgeEl = document.getElementById('feedbackBadge');
 const lessonTitleEl = document.getElementById('lessonTitle');
+const feedbackStripEl = persistentFeedbackEl?.closest('.feedback-strip');
+const challengeCardEl = challengePromptEl?.closest('.challenge-card');
 const restartRoundBtn = document.getElementById('restartRound');
 const hintButtonEl = document.getElementById('hintButton');
 const openLessonMapBtn = document.getElementById('openLessonMap');
@@ -184,10 +186,28 @@ function renderScaleNotes(scale, builtCount = 0) {
   });
 }
 
+function applyPanelState(tone = 'neutral') {
+  const tones = ['success-state', 'warning-state'];
+  feedbackStripEl?.classList.remove(...tones);
+  challengeCardEl?.classList.remove(...tones);
+
+  if (tone === 'success') {
+    feedbackStripEl?.classList.add('success-state');
+    challengeCardEl?.classList.add('success-state');
+  }
+
+  if (tone === 'warning' || tone === 'wrong') {
+    feedbackStripEl?.classList.add('warning-state');
+    challengeCardEl?.classList.add('warning-state');
+  }
+}
+
 function setFeedback(html, tone = 'neutral', badge = 'Waiting') {
   persistentFeedbackEl.innerHTML = html;
   feedbackBadgeEl.textContent = badge;
   feedbackBadgeEl.className = `feedback-badge ${tone}`;
+  applyPanelState(tone);
+}`;
 }
 
 function setQuizMessage(html, className = '') {
