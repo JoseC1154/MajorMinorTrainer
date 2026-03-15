@@ -3,6 +3,36 @@
 export const NOTE_LIST = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export const NOTE_TO_PC = new Map(NOTE_LIST.map((note, index) => [note, index]));
 
+const TRANSIENT_STATE_CLASSES = [
+  'questionNote',
+  'selectedCorrect',
+  'selectedWrong',
+  'completedKey',
+  'targetKey',
+  'multiTarget'
+];
+
+const PERSISTENT_STATE_CLASSES = [
+  'shaded',
+  'inScale'
+];
+
+function getAllKeys(pianoKeyboard) {
+  if (!pianoKeyboard) return [];
+  return [...pianoKeyboard.querySelectorAll('.pianoKey')];
+}
+
+function clearClasses(keys, classNames) {
+  keys.forEach(key => {
+    key.classList.remove(...classNames);
+  });
+}
+
+function normalizeNotes(notes) {
+  if (!Array.isArray(notes)) return new Set();
+  return new Set(notes.filter(Boolean));
+}
+
 export function generatePianoKeys(pianoKeyboard, options = {}) {
   if (!pianoKeyboard) return;
 
@@ -147,10 +177,10 @@ export function updatePianoVisualization(pianoKeyboard, rootKey, scaleType, SCAL
     noteDegrees.set(noteName, String(index + 1));
   });
 
-  const keys = pianoKeyboard.querySelectorAll('.pianoKey');
+  const keys = getAllKeys(pianoKeyboard);
   keys.forEach(key => {
     const note = key.dataset.note;
-    key.classList.remove('shaded', 'inScale', 'questionNote', 'selectedCorrect', 'selectedWrong');
+    key.classList.remove(...PERSISTENT_STATE_CLASSES, ...TRANSIENT_STATE_CLASSES);
     key.dataset.scaleLabel = '';
     key.dataset.degree = '';
 
@@ -164,28 +194,65 @@ export function updatePianoVisualization(pianoKeyboard, rootKey, scaleType, SCAL
   });
 }
 
+export function resetRoundStates(pianoKeyboard, options = {}) {
+  const { keepScaleState = true } = options;
+  const keys = getAllKeys(pianoKeyboard);
+  clearClasses(keys, TRANSIENT_STATE_CLASSES);
+
+  if (!keepScaleState) {
+    clearClasses(keys, PERSISTENT_STATE_CLASSES);
+    keys.forEach(key => {
+      key.dataset.scaleLabel = '';
+      key.dataset.degree = '';
+    });
+  }
+}
+
 export function highlightQuestionNote(pianoKeyboard, questionNote) {
   if (!pianoKeyboard || !questionNote) return;
-  const keys = pianoKeyboard.querySelectorAll('.pianoKey');
+  const keys = getAllKeys(pianoKeyboard);
   keys.forEach(key => {
-    key.classList.remove('questionNote');
+    key.classList.remove('questionNote', 'targetKey');
     if (key.dataset.note === questionNote) {
-      key.classList.add('questionNote');
+      key.classList.add('questionNote', 'targetKey');
+    }
+  });
+}
+
+export function setTargetKey(pianoKeyboard, noteName) {
+  if (!pianoKeyboard || !noteName) return;
+  const keys = getAllKeys(pianoKeyboard);
+  keys.forEach(key => {
+    key.classList.remove('targetKey');
+    if (key.dataset.note === noteName) {
+      key.classList.add('targetKey');
+    }
+  });
+}
+
+export function setTargetKeys(pianoKeyboard, noteNames = []) {
+  if (!pianoKeyboard) return;
+  const targets = normalizeNotes(noteNames);
+  const keys = getAllKeys(pianoKeyboard);
+  keys.forEach(key => {
+    key.classList.remove('multiTarget', 'targetKey');
+    if (targets.has(key.dataset.note)) {
+      key.classList.add('multiTarget', 'targetKey');
     }
   });
 }
 
 export function clearQuestionHighlight(pianoKeyboard) {
   if (!pianoKeyboard) return;
-  const keys = pianoKeyboard.querySelectorAll('.pianoKey');
+  const keys = getAllKeys(pianoKeyboard);
   keys.forEach(key => {
-    key.classList.remove('questionNote');
+    key.classList.remove('questionNote', 'targetKey', 'multiTarget');
   });
 }
 
 export function clearSelectionFeedback(pianoKeyboard) {
   if (!pianoKeyboard) return;
-  const keys = pianoKeyboard.querySelectorAll('.pianoKey');
+  const keys = getAllKeys(pianoKeyboard);
   keys.forEach(key => {
     key.classList.remove('selectedCorrect', 'selectedWrong');
   });
@@ -193,11 +260,44 @@ export function clearSelectionFeedback(pianoKeyboard) {
 
 export function markSelectedKey(pianoKeyboard, noteName, isCorrect) {
   if (!pianoKeyboard || !noteName) return;
-  const keys = pianoKeyboard.querySelectorAll('.pianoKey');
+  const keys = getAllKeys(pianoKeyboard);
   keys.forEach(key => {
     if (key.dataset.note === noteName) {
       key.classList.remove('selectedCorrect', 'selectedWrong');
       key.classList.add(isCorrect ? 'selectedCorrect' : 'selectedWrong');
+    }
+  });
+}
+
+export function setWrongKey(pianoKeyboard, noteName) {
+  if (!pianoKeyboard || !noteName) return;
+  markSelectedKey(pianoKeyboard, noteName, false);
+}
+
+export function setCorrectKey(pianoKeyboard, noteName) {
+  if (!pianoKeyboard || !noteName) return;
+  markSelectedKey(pianoKeyboard, noteName, true);
+}
+
+export function setCompletedKey(pianoKeyboard, noteName) {
+  if (!pianoKeyboard || !noteName) return;
+  const keys = getAllKeys(pianoKeyboard);
+  keys.forEach(key => {
+    if (key.dataset.note === noteName) {
+      key.classList.add('completedKey');
+      key.classList.remove('selectedWrong');
+    }
+  });
+}
+
+export function lockCompletedKeys(pianoKeyboard, noteNames = []) {
+  if (!pianoKeyboard) return;
+  const completed = normalizeNotes(noteNames);
+  const keys = getAllKeys(pianoKeyboard);
+  keys.forEach(key => {
+    key.classList.remove('completedKey');
+    if (completed.has(key.dataset.note)) {
+      key.classList.add('completedKey');
     }
   });
 }
