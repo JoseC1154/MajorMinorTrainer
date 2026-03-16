@@ -40,7 +40,7 @@
           <p class="eyebrow">Current lesson</p>
           <h2 id="lessonTitle">Scale Builder Training</h2>
         </div>
-        <button id="openLessonMap" class="ghost-button" type="button">Lesson Map</button>
+        <button id="openLessonMapDesktop" class="ghost-button" type="button">Lesson Map</button>
       </div>
 
       <div class="lesson-stats-grid" aria-label="Lesson stats">
@@ -153,6 +153,26 @@
     </section>
 
   </main>
+
+  <div id="modalOverlay" class="modal-overlay is-hidden" aria-hidden="true">
+    <div id="feedbackModal" class="game-modal feedback-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" tabindex="0">
+      <div class="game-modal-head">
+        <p class="eyebrow">Live Feedback</p>
+        <h2 id="feedbackModalTitle">Feedback</h2>
+      </div>
+      <div id="feedbackModalBody" class="game-modal-body">Tap feedback will appear here.</div>
+      <div class="game-modal-tap-hint">Tap anywhere to continue</div>
+    </div>
+
+    <div id="progressModal" class="game-modal progress-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle" tabindex="0">
+      <div class="game-modal-head">
+        <p class="eyebrow">Progress</p>
+        <h2 id="progressModalTitle">Progress Update</h2>
+      </div>
+      <div id="progressModalBody" class="game-modal-body">Level progress will appear here.</div>
+      <div class="game-modal-tap-hint">Tap anywhere to continue</div>
+    </div>
+  </div>
 
   <div class="bottom-action-bar" role="toolbar" aria-label="Lesson controls">
     <button id="primaryAction" type="button">Start Lesson</button>
