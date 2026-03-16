@@ -539,6 +539,65 @@ button:hover{
   z-index:2;
 }
 
+/* Modal system */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  z-index:60;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(4,8,14,.72);
+  backdrop-filter:blur(6px);
+}
+
+.modal-overlay.is-hidden,
+.game-modal.is-hidden{
+  display:none;
+}
+
+.game-modal{
+  width:min(100%, 420px);
+  background:linear-gradient(180deg,#1a2029 0%, #141922 100%);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.42);
+  padding:18px 16px 14px;
+  animation:modalPop .2s ease;
+}
+
+.feedback-modal{
+  border-color:#3d556f;
+}
+
+.progress-modal{
+  border-color:#2f855a;
+}
+
+.game-modal-head h2{
+  margin:0;
+  font-size:1.15rem;
+}
+
+.game-modal-body{
+  margin-top:12px;
+  line-height:1.55;
+  color:var(--text);
+}
+
+.game-modal-tap-hint{
+  margin-top:14px;
+  font-size:.82rem;
+  color:var(--muted);
+  text-align:center;
+}
+
+@keyframes modalPop{
+  0%{ transform:translateY(8px) scale(.98); opacity:.86; }
+  100%{ transform:translateY(0) scale(1); opacity:1; }
+}
+
 .footer{
   text-align:center;
   padding:8px 12px 12px;
@@ -565,6 +624,28 @@ button:hover{
 }
 
 @media (max-width:600px){
+  .modal-overlay{
+    padding:14px;
+  }
+
+  .game-modal{
+    width:100%;
+    max-width:100%;
+    padding:16px 14px 12px;
+    border-radius:16px;
+  }
+
+  .game-modal-head h2{
+    font-size:1.02rem;
+  }
+
+  .game-modal-body{
+    font-size:.96rem;
+  }
+
+  .game-modal-tap-hint{
+    font-size:.78rem;
+  }
   .header{
     padding:12px 12px 10px;
   }
