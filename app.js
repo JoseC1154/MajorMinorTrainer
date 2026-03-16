@@ -67,6 +67,14 @@ const primaryActionBtn = document.getElementById('primaryAction');
 const secondaryActionBtn = document.getElementById('secondaryAction');
 const hintButtonEl = document.getElementById('hintButton');
 const openLessonMapBtn = document.getElementById('openLessonMap');
+const openLessonMapDesktopBtn = document.getElementById('openLessonMapDesktop');
+const modalOverlayEl = document.getElementById('modalOverlay');
+const feedbackModalEl = document.getElementById('feedbackModal');
+const feedbackModalTitleEl = document.getElementById('feedbackModalTitle');
+const feedbackModalBodyEl = document.getElementById('feedbackModalBody');
+const progressModalEl = document.getElementById('progressModal');
+const progressModalTitleEl = document.getElementById('progressModalTitle');
+const progressModalBodyEl = document.getElementById('progressModalBody');
 
 const storageKey = 'scaleBuilderProgress';
 
@@ -92,6 +100,8 @@ let builderState = {
 
 let currentQuiz = null;
 let currentLessonRound = null;
+let pendingContinueAction = null;
+let activeModalType = null;
 
 function createDefaultLessonStats() {
   const stats = {};
@@ -263,6 +273,47 @@ function setFeedback(html, tone = 'neutral', badge = 'Waiting') {
   persistentFeedbackEl.innerHTML = html;
   feedbackBadgeEl.textContent = badge;
   feedbackBadgeEl.className = `feedback-badge ${tone}`;
+  applyPanelState(tone);
+}
+
+function hideModals() {
+  modalOverlayEl?.classList.add('is-hidden');
+  modalOverlayEl?.setAttribute('aria-hidden', 'true');
+  feedbackModalEl?.classList.add('is-hidden');
+  progressModalEl?.classList.add('is-hidden');
+  activeModalType = null;
+}
+
+function showModal(type, title, body, onContinue = null) {
+  if (!modalOverlayEl || !feedbackModalEl || !progressModalEl) return;
+
+  pendingContinueAction = typeof onContinue === 'function' ? onContinue : null;
+  activeModalType = type;
+  modalOverlayEl.classList.remove('is-hidden');
+  modalOverlayEl.setAttribute('aria-hidden', 'false');
+  feedbackModalEl.classList.add('is-hidden');
+  progressModalEl.classList.add('is-hidden');
+
+  if (type === 'progress') {
+    if (progressModalTitleEl) progressModalTitleEl.textContent = title;
+    if (progressModalBodyEl) progressModalBodyEl.innerHTML = body;
+    progressModalEl.classList.remove('is-hidden');
+    progressModalEl.focus?.();
+    return;
+  }
+
+  if (feedbackModalTitleEl) feedbackModalTitleEl.textContent = title;
+  if (feedbackModalBodyEl) feedbackModalBodyEl.innerHTML = body;
+  feedbackModalEl.classList.remove('is-hidden');
+  feedbackModalEl.focus?.();
+}
+
+function continueFromModal() {
+  const action = pendingContinueAction;
+  pendingContinueAction = null;
+  hideModals();
+  if (action) action();
+}`;
   applyPanelState(tone);
 }
 
@@ -465,6 +516,12 @@ function completeLessonRound() {
   setQuizMessage('Round won. Tap <strong>Next</strong> to continue to the next micro-lesson.', 'correct');
   currentLessonRound = null;
   updateLessonMeta();
+  showModal(
+    'progress',
+    'Round Complete',
+    `You cleared a round in <strong>${config.title}</strong>.<br><br>Rounds: <strong>${stats.roundsWon}/${config.roundsRequired}</strong><br>Accuracy: <strong>${accuracy}%</strong><br><br>Tap to continue.`,
+    () => startLessonMode()
+  );
 }
 
 function completeLesson() {
@@ -497,6 +554,12 @@ function completeLesson() {
   updateChallengePrompt(`Award earned. ${nextLesson ? `You unlocked <strong>${nextLesson.title}</strong>.` : 'You mastered the current learning path.'}`);
   setQuizMessage('Great work. Your next lesson is now unlocked.', 'correct');
   currentLessonRound = null;
+  showModal(
+    'progress',
+    'Lesson Unlocked',
+    `${nextLesson ? `You unlocked <strong>${nextLesson.title}</strong>.` : 'You mastered the full lesson path.'}<br><br>Tap to continue.`,
+    () => startLessonMode()
+  );
 }
 
 function buildLessonRound() {
@@ -795,8 +858,13 @@ function handleLessonTap(note) {
     renderScaleNotes([]);
     setFeedback(currentLessonRound.successMessage, 'success', 'Correct');
     updateChallengePrompt(`Nice work. ${currentLessonRound.successMessage}`);
-    setQuizMessage('Round clear. Tap <strong>Next</strong> for the next micro-lesson.', 'correct');
-    completeLessonRound();
+    setQuizMessage('Round clear. The progress modal will let you continue.', 'correct');
+    showModal(
+      'feedback',
+      'Correct',
+      `${currentLessonRound.successMessage}<br><br>Tap to continue.`,
+      () => completeLessonRound()
+    );
     return;
   }
 
@@ -807,6 +875,12 @@ function handleLessonTap(note) {
   updateChallengePrompt(currentLessonRound.prompt);
   setQuizMessage(`Try again. ${currentLessonRound.feedback}`, 'wrong');
   updateLessonMeta();
+  showModal(
+    'feedback',
+    'Try Again',
+    `Not quite. <strong>${note}</strong> is not correct for this lesson.<br><br>${currentLessonRound.feedback}<br><br>Tap to continue.`,
+    null
+  );
 }
 
 function completeQuizRound() {
@@ -835,12 +909,24 @@ function handleBuildTap(note) {
       renderScaleNotes(targetScale, targetScale.length);
       renderBuildPrompt();
       saveProgress();
+      showModal(
+        'progress',
+        'Scale Complete',
+        `You built <strong>${rootNoteEl.value} ${getScaleTypeLabel(scaleTypeEl.value)}</strong>.<br><br>Tap to continue.`,
+        null
+      );
       return;
     }
 
     renderScaleNotes(targetScale, builderState.expectedIndex);
     renderBuildPrompt();
     saveProgress();
+    showModal(
+      'feedback',
+      'Correct',
+      `Correct. <strong>${note}</strong> is the next note in the scale.<br><br>Tap to continue.`,
+      null
+    );
     return;
   }
 
@@ -853,6 +939,12 @@ function handleBuildTap(note) {
   updateChallengePrompt(`Not quite. You tapped <strong>${note}</strong>. Try again from <strong>${previousNote}</strong>.`);
   setFeedback(`Wrong note. After <strong>${previousNote}</strong>, you need to <strong>${explanation}</strong> to reach the next note.`, 'wrong', 'Try Again');
   setQuizMessage(`Not quite. The next correct note after <strong>${previousNote}</strong> should follow a <strong>${builderState.expectedIndex === 0 ? 'root start' : getStepLabel(builderState.expectedIndex - 1)}</strong>.`, 'wrong');
+  showModal(
+    'feedback',
+    'Try Again',
+    `Wrong note. After <strong>${previousNote}</strong>, you need to <strong>${explanation}</strong>.<br><br>Tap to continue.`,
+    null
+  );
 }
 
 function handleQuizTap(note) {
@@ -866,11 +958,17 @@ function handleQuizTap(note) {
     setCompletedKey(pianoContainerEl, note);
     completeQuizRound();
     setFeedback(`Correct! <strong>${currentQuiz.answer}</strong> is the missing note in the scale.`, 'success', 'Correct');
-    updateChallengePrompt(`Great job. You found the missing note: <strong>${currentQuiz.answer}</strong>. Tap <strong>Next</strong> for another quiz round.`);
+    updateChallengePrompt(`Great job. You found the missing note: <strong>${currentQuiz.answer}</strong>.`);
     setQuizMessage(`Correct! <strong>${currentQuiz.answer}</strong> completes the ${currentQuiz.root} ${currentQuiz.typeLabel} scale.`, 'correct');
     currentQuiz = null;
     renderScaleNotes(targetScale, targetScale.length);
     updateLessonMeta();
+    showModal(
+      'progress',
+      'Nice Work',
+      `Correct! <strong>${note}</strong> completes the scale.<br><br>Tap to continue to the next round.`,
+      () => startQuiz()
+    );
     return;
   }
 
@@ -881,6 +979,12 @@ function handleQuizTap(note) {
   setFeedback(`Not quite. <strong>${note}</strong> does not fit the blank. Look at the notes around the gap and try again.`, 'wrong', 'Wrong');
   updateChallengePrompt('Try again. The missing note is still hidden in the scale above.');
   setQuizMessage(`Not quite. <strong>${note}</strong> is not the missing note. Keep looking at the scale pattern and tap again.`, 'wrong');
+  showModal(
+    'feedback',
+    'Try Again',
+    `Not quite. <strong>${note}</strong> is not the missing note.<br><br>Tap to continue.`,
+    null
+  );
 }
 
 function handlePianoSelection({ note }) {
@@ -992,6 +1096,12 @@ primaryActionBtn?.addEventListener('click', handlePrimaryAction);
 secondaryActionBtn?.addEventListener('click', handleSecondaryAction);
 hintButtonEl?.addEventListener('click', showHint);
 openLessonMapBtn?.addEventListener('click', openLessonMap);
+openLessonMapDesktopBtn?.addEventListener('click', openLessonMap);
+modalOverlayEl?.addEventListener('click', event => {
+  if (event.target === modalOverlayEl || event.target.closest('.game-modal')) {
+    continueFromModal();
+  }
+});
 
 scaleTypeEl.addEventListener('change', () => {
   renderPattern(scaleTypeEl.value);
@@ -1032,3 +1142,4 @@ renderPattern(scaleTypeEl.value);
 updateHeaderStats();
 updateLessonMeta();
 startLessonMode();
+hideModals();
